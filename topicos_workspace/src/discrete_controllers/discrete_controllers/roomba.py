@@ -42,27 +42,13 @@ class Roomba(Node):
         currentState = RoombaState.MOVING
       case RoombaState.MOVING:
         if (min(forwardRanges) > minForwardRange):
-          msg = Twist()
-          msg.linear.x = 999.0
-          msg.linear.y = 0.0
-          msg.linear.z = 0.0
-          msg.angular.x = 0.0
-          msg.angular.y = 0.0
-          msg.angular.z = 0.0
-          roombaNode.publisher.publish(msg)
+          self.roomba_twist(999.0, 0.0, roombaNode)
         else:
           print("TURNING - START")
           currentState = RoombaState.TURNING
       case RoombaState.TURNING:
-        if (max(forwardRanges) < minForwardRange):
-          msg = Twist()
-          msg.linear.x = 0.0
-          msg.linear.y = 0.0
-          msg.linear.z = 0.0
-          msg.angular.x = 0.0
-          msg.angular.y = 0.0
-          msg.angular.z = 999.0
-          roombaNode.publisher.publish(msg)
+        if (min(forwardRanges) < minForwardRange):
+          self.roomba_twist(0.0, 999.0, roombaNode)
         else:
           print("MOVING - START")
           currentState = RoombaState.MOVING
@@ -72,14 +58,25 @@ class Roomba(Node):
         print("_")
     return currentState
 
+  def roomba_twist(self, linear, angular, roombaNode):
+    msg = Twist()
+    msg.linear.x = linear
+    msg.linear.y = 0.0
+    msg.linear.z = 0.0
+    msg.angular.x = 0.0
+    msg.angular.y = 0.0
+    msg.angular.z = angular
+    roombaNode.publisher.publish(msg)
+
   def roomba_loop(self, roombaNode):
     minForwardRange = 1
+    fovRange = 70
     exitRequest = False
     # TODO como calcular? =/// -scanMsg.angle_min/scanMsg.angle_increment
     forwardIndex = 160
     # TODO cagado, estatico, ta, mas 160 tambem ta estatico, entao fodas
-    forwardIndexes = list(range(forwardIndex - 5, forwardIndex + 5))
-    print(forwardIndexes)
+    forwardIndexes = list(
+        range(forwardIndex - fovRange, forwardIndex + fovRange))
     currentState = RoombaState.START
     print("MAIN LOOP - START")
     while (exitRequest != True):
