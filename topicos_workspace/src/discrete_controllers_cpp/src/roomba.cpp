@@ -1,32 +1,48 @@
-#include <functional>
-#include <memory>
+#include <nav_msgs/msg/odometry.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/laser_scan.hpp>
 
-#include "nav_msgs/msg/odometry.hpp"
-#include "rclcpp/rclcpp.hpp"
+using namespace std;
+using namespace rclcpp;
+using namespace nav_msgs::msg;
+using namespace sensor_msgs::msg;
 
-class Roomba : public rclcpp::Node {
+class Roomba : public Node {
  public:
   Roomba() : Node("roomba_cpp") {
-    subscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
-        "/odom", 10,
-        std::bind(&Roomba::odom_callback, this, std::placeholders::_1));
-    this->isDone = false;
+    odomSubscription = this->create_subscription<Odometry>(
+        "/odom", 10, bind(&odom_callback, this, placeholders::_1));
+    laserSubscription = this->create_subscription<LaserScan>(
+        "/scan", 10, bind(&scan_callback, this, placeholders::_1));
+    isDone = 0;
   }
 
  private:
-  bool isDone;
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscription_;
-  void odom_callback(const nav_msgs::msg::Odometry& msg) {
-    if (!this->isDone) {
+  int isDone;
+
+  Subscription<Odometry>::SharedPtr odomSubscription;
+
+  Subscription<LaserScan>::SharedPtr laserSubscription;
+
+  void odom_callback(const Odometry& msg) {
+    if (isDone < 2) {
       RCLCPP_INFO_STREAM(this->get_logger(), msg.pose.pose.position.x);
-      this->isDone = true;
+      isDone++;
+    }
+  }
+
+  void scan_callback(const LaserScan& msg) {
+    if (isDone < 2) {
+      RCLCPP_INFO_STREAM(this->get_logger(), msg.ranges[0]);
+      isDone++;
     }
   }
 };
 
 int main(int argc, char* argv[]) {
-  rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<Roomba>());
-  rclcpp::shutdown();
+  int a = 0;
+  init(argc, argv);
+  spin(make_shared<Roomba>());
+  shutdown();
   return 0;
 }
